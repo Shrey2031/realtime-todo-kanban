@@ -15,16 +15,30 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: "http://localhost:5173", 
     methods: ["GET", "POST"]
   }
 });
 
-app.use((req, res, next) => {
+// app.use((req, res, next) => {
+//   req.io = io;
+//   next();
+// });
+
+
+import taskRoutes from './src/routes/task.routes.js';
+import logRoutes from './src/routes/log.routes.js';
+
+
+
+app.use('/api/v1/tasks',(req, res, next) => {
+  req.io = io; // ✅ attach socket instance
+  next();
+},taskRoutes);
+app.use('/api/v1/logs',(req, res, next) => {
   req.io = io;
   next();
-});
-
+}, logRoutes);
 
 connectDB();
 initSocket(io);

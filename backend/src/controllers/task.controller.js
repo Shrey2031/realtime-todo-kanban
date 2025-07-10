@@ -9,31 +9,96 @@ export const getTasks = async (req, res) => {
   res.json(tasks);
 };
 
+// export const createTask = async (req, res) => {
+//   try {
+//     const { title, description, priority } = req.body;
+//     if (!title || !description || !priority) {
+//       return res.status(400).json({ message: "Missing required fields" });
+//     }
+
+//     // Prevent column name conflict
+//     if (["Todo", "In Progress", "Done"].includes(title)) {
+//       return res.status(400).json(
+//         new ApiResponse(400, "Title cannot match column name")
+//       )
+
+//       // return res.status(400).json({ message: "Title cannot match column name" });
+//     }
+
+//     const existing = await Task.findOne({ title });
+//     if (existing) return res.status(400).json({ message: "Title must be unique" });
+
+//     const task = await Task.create({ title, description, priority,
+//        user: req.user._id 
+//      });
+//      console.log("✅ Task created:", task.title);
+//     await Log.create({ actionType: "Add", task: task._id, performedBy: req.user.id });
+//     if (!req.user || !req.user._id) {
+//     return res.status(401).json({ message: "Unauthorized user" });
+// }
+
+
+//     req.io.emit("taskUpdated", task); // broadcast real-time update
+//     res.status(201).json(task);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+   
+
+// };
+
 export const createTask = async (req, res) => {
   try {
     const { title, description, priority } = req.body;
 
-    // Prevent column name conflict
-    if (["Todo", "In Progress", "Done"].includes(title)) {
-      return res.status(400).json(
-        new ApiResponse(400, "Title cannot match column name")
-      )
+    if (!title || !description || !priority) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
-      // return res.status(400).json({ message: "Title cannot match column name" });
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized user" });
+    }
+
+    if (["Todo", "In Progress", "Done"].includes(title)) {
+      return res.status(400).json({ message: "Title cannot match column name" });
     }
 
     const existing = await Task.findOne({ title });
-    if (existing) return res.status(400).json({ message: "Title must be unique" });
+    if (existing) {
+      return res.status(400).json({ message: "Title must be unique" });
+    }
 
-    const task = await Task.create({ title, description, priority });
-    await Log.create({ actionType: "Add", task: task._id, performedBy: req.user.id });
+    const task = await Task.create({
+      title,
+      description,
+      priority,
+      assignedUser: req.user._id
+    });
+
+    console.log("✅ Task created:", task.title);
+   
+    
+   let log =  await Log.create({
+      actionType: "Add",
+      task: task._id,
+      performedBy: req.user._id,
+      details: `Task "${task.title}" created`
+    });
+
+    log = await log.populate("performedBy", "name").populate("task", "title");
+
+// ✅ Broadcast to all clients
+    req.io.emit("logAdded", log);
 
     req.io.emit("taskUpdated", task); // broadcast real-time update
     res.status(201).json(task);
+
   } catch (err) {
+    console.error("🔥 Error creating task:", err.message);
     res.status(500).json({ message: err.message });
   }
-};
+}
+
 
 export const updateTask = async (req, res) => {
   try {
@@ -78,6 +143,7 @@ export const deleteTask = async (req, res) => {
     req.io.emit("taskDeleted", { id });
     res.json({ message: "Task deleted" });
   } catch (err) {
+     console.error("🔥 Delete task failed:", err.message);
     res.status(500).json({ message: err.message });
   }
 };
