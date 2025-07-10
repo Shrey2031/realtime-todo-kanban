@@ -30,15 +30,21 @@ const KanbanColumn = ({
           onClick={() => onTaskClick(task)}
           onDragStart={() => onDragStart(task, columnKey)}
         >
+          <div className="card-header">
           <div className="card-title">{task.title}</div>
+            <button className="btn-icon-delete " onClick={() => onDelete(task._id)}><i className="fas fa-trash"></i></button>
+          </div>
+          {/* <div className="card-title">{task.title}</div> */}
           <div className="card-meta">
-            <div className="card-assignee">
+          <div className="card-assignee">
               <div className="assignee-avatar">{task.assignedUser?.name?.charAt(0) || "?"}</div>
               <span>{task.assignedUser?.name || "Unassigned"}</span>
             </div>
           </div>
-          <button className="btn btn-delete" onClick={() => onDelete(task._id)}>Delete</button>
+          {/* <button className="delete-task-btn" onClick={() => onDelete(task._id)}><i className="fas fa-trash"></i></button> */}
         </div>
+      
+          
       ))}
     </div>
 

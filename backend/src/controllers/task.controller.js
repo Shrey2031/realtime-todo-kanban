@@ -131,22 +131,64 @@ export const updateTask = async (req, res) => {
   }
 };
 
+// export const deleteTask = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const task = await Task.findByIdAndDelete(id);
+//     if (!task){
+//       throw new ApiError(404, "Task not found");
+//     } 
+
+//     const taskTitle = task.title;
+
+//    let log = await Log.create({ actionType: "Delete",
+//        task: id,
+//         performedBy: req.user.id ,
+//        details: `Delete task "${taskTitle}"`
+//       });
+
+//     log = await log.populate("performedBy", "name").populate("task", "title");
+
+//     req.io.emit("logAdded", log);
+
+    
+//     res.json({ message: "Task deleted" });
+//   } catch (err) {
+//      console.error("🔥 Delete task failed:", err.message);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 export const deleteTask = async (req, res) => {
   try {
-    const { id } = req.params;
-    const task = await Task.findByIdAndDelete(id);
-    if (!task){
-      throw new ApiError(404, "Task not found");
-    } 
+    const task = await Task.findById(req.params.id);
 
-    await Log.create({ actionType: "Delete", task: id, performedBy: req.user.id });
-    req.io.emit("taskDeleted", { id });
-    res.json({ message: "Task deleted" });
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const taskTitle = task.title;
+
+    await task.deleteOne();
+
+    const newLog = await Log.create({
+      actionType: "Delete",
+      task: task._id,
+      performedBy: req.user._id,
+      details: `Delete task "${taskTitle}"`
+    });
+
+    const log = await Log.findById(newLog._id)
+      .populate("performedBy", "name")
+      .populate("task", "title");
+
+    req.io.emit("logAdded", log);
+
+    res.json({ message: "Task deleted successfully" });
   } catch (err) {
-     console.error("🔥 Delete task failed:", err.message);
+    console.error("🔥 Delete task failed:", err.message);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 export const smartAssign = async (req, res) => {
   try {
