@@ -16,7 +16,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "https://kanban-frontend-wqv8.onrender.com", 
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+     credentials: true
   }
 });
 
