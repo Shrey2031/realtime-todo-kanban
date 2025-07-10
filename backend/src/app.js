@@ -11,7 +11,7 @@ dotenv.config({
 const app = express();
 
 app.use(cors({
-    origin:process.env.DASHBOARD_URL,
+    origin:"https://kanban-frontend-wqv8.onrender.com",
     methods:['GET','PUT','POST','DELETE'],
     credentials:true
 }))

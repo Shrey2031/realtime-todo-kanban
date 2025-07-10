@@ -15,7 +15,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://kanban-task-manager-7soo.onrender.com", 
+    origin: "https://kanban-frontend-wqv8.onrender.com", 
     methods: ["GET", "POST"]
   }
 });
