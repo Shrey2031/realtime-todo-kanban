@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:9000/api/v1", 
+  baseURL: "import.meta.env.https://kanban-task-manager-7soo.onrender.com", 
   withCredentials:true,// change for production
 });
 
