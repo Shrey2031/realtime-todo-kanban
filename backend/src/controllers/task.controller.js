@@ -90,8 +90,11 @@ export const createTask = async (req, res) => {
 // ✅ Broadcast to all clients
     req.io.emit("logAdded", log);
 
-    req.io.emit("taskUpdated", task); // broadcast real-time update
-    res.status(201).json(task);
+    // req.io.emit("taskUpdated", task); // broadcast real-time update
+    const populatedTask = await task.populate("assignedUser", "name");
+    req.io.emit("taskUpdated", populatedTask);
+    res.status(201).json(populatedTask);
+
 
   } catch (err) {
     console.error("🔥 Error creating task:", err.message);
@@ -124,8 +127,12 @@ export const updateTask = async (req, res) => {
     const task = await Task.findByIdAndUpdate(id, update, { new: true });
 
     await Log.create({ actionType: "Edit", task: task._id, performedBy: req.user.id });
-    req.io.emit("taskUpdated", task);
-    res.json(task);
+    // req.io.emit("taskUpdated", task);
+    const updated = await Task.findById(id).populate("assignedUser", "name");
+    req.io.emit("taskUpdated", updated);
+    res.json(updated);
+
+    // res.json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -176,11 +183,11 @@ export const deleteTask = async (req, res) => {
       details: `Delete task "${taskTitle}"`
     });
 
-    const log = await Log.findById(newLog._id)
-      .populate("performedBy", "name")
-      .populate("task", "title");
+      newLog = await Log.populate("performedBy", "name").populate("task", "title");
 
-    req.io.emit("logAdded", log);
+    req.io.emit("logAdded", newLog);
+    req.io.emit("taskDeleted", task._id); // 👈 required for real-time deletion
+
 
     res.json({ message: "Task deleted successfully" });
   } catch (err) {
@@ -199,7 +206,7 @@ export const smartAssign = async (req, res) => {
     }
       //  return res.status(400).json({ message: "No users to assign" });
 
-    const task = await Task.findByIdAndUpdate(taskId, { assignedUser: bestUserId }, { new: true });
+    const task = await Task.findByIdAndUpdate(taskId, { assignedUser: bestUserId }, { new: true }).populate("assignedUser", "name");
 
     await Log.create({
       actionType: "Assign",

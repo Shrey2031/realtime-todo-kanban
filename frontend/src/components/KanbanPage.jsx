@@ -57,6 +57,33 @@ const KanbanDashboard = () => {
     loadTasks();
     loadLogs();
     socket.on("logAdded", (log) => {
+        // 🟢 Task Created or Updated
+    socket.on("taskUpdated", (updatedTask) => {
+    const colKey = statusMap[updatedTask.status] || "todo";
+
+    setTasks(prev => {
+      const updated = { ...prev };
+      // Remove from all columns
+      Object.keys(updated).forEach(key => {
+        updated[key] = updated[key].filter(t => t._id !== updatedTask._id);
+      });
+      // Add to correct column
+      updated[colKey].push(updatedTask);
+      return updated;
+     });
+    });
+
+  // 🔴 Task Deleted
+    socket.on("taskDeleted", (taskId) => {
+    setTasks(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(key => {
+        updated[key] = updated[key].filter(t => t._id !== taskId);
+      });
+      return updated;
+    });
+  });
+
       const activity = {
         id: log._id,
         action: log.details || `${log.actionType} task "${log.task?.title}"`,
@@ -66,7 +93,11 @@ const KanbanDashboard = () => {
       };
       setActivities(prev => [activity, ...prev.slice(0, 19)]);
     });
-    return () => socket.off("logAdded");
+    return () => {socket.off("logAdded");
+      socket.off("taskUpdated");
+      socket.off("taskDeleted");
+
+    };
   }, []);
 
   const handleLogout = () => {
@@ -75,9 +106,26 @@ const KanbanDashboard = () => {
   };
 
   const handleAddTask = async (taskData) => {
-    await createTask({ ...taskData, status: reverseStatusMap[taskData.status] });
-    setIsModalOpen(false);
-    await loadTasks();
+    // await createTask({ ...taskData, status: reverseStatusMap[taskData.status] });
+    // setIsModalOpen(false);
+   try {
+     const res = await createTask({ ...taskData, status: reverseStatusMap[taskData.status] });
+     const createdTask = res.data;
+ 
+    setTasks((prevTasks) => {
+    const key = statusMap[createdTask.status] || "todo";
+    return {
+     ...prevTasks,
+     [key]: [...prevTasks[key], createdTask],
+    };
+    });
+ 
+   setIsModalOpen(false);
+   } catch (error) {
+     console.error("Failed to add task:", err);
+   }
+
+    // await loadTasks();
   };
 
   const handleDelete = async (taskId) => {
