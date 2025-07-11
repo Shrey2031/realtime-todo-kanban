@@ -108,8 +108,9 @@ const loginUser = asyncHandler(async(req,resp) => {
 
    const options = {
     httpOnly: true,
-    secure: true
-
+    secure: true,
+    sameSite: "None",           // ✅ Needed for cross-origin
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 
    }
 
    return resp.status(200)

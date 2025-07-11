@@ -10,6 +10,8 @@ import TaskModal from "../components/Dashboard/TaskModel";
 import TaskActionModal from "./Dashboard/TaskActionModel";
 import "../styles/kanban.css";
 
+console.log("✅ VITE_API_URL:", import.meta.env.VITE_API_URL);
+
 const KanbanDashboard = () => {
   const [tasks, setTasks] = useState({ todo: [], inProgress: [], done: [] });
   const [activities, setActivities] = useState([]);
