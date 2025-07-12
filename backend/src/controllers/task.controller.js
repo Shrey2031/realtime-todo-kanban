@@ -4,12 +4,18 @@ import { getLeastLoadedUser } from "../utils/smartAssign.js";
 import { ApiResponse } from "../utils/apiResponce.js";
 import { ApiError } from "../utils/apiError.js";
 
+// export const getTasks = async (req, res) => {
+//   const tasks = await Task.find().populate("assignedUser");
+//   res.json(tasks);
+// };
+
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find().populate("assignedUser");
+  const tasks = await Task.find({ assignedUser: req.user._id }).populate("assignedUser", "name");
   res.json(tasks);
 };
 
-// export const createTask = async (req, res) => {
+
+
 //   try {
 //     const { title, description, priority } = req.body;
 //     if (!title || !description || !priority) {
