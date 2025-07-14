@@ -10,8 +10,13 @@ import { ApiError } from "../utils/apiError.js";
 // };
 
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find({ assignedUser: req.user._id }).populate("assignedUser", "name");
-  res.json(tasks);
+ try {
+   const tasks = await Task.find({ assignedUser: req.user._id }).populate("assignedUser", "name");
+   res.json(tasks);
+ } catch (err) {
+  console.error("🔥 Failed to get tasks:", err.message);
+    res.status(500).json({ message: err.message });
+ }
 };
 
 
@@ -182,14 +187,17 @@ export const deleteTask = async (req, res) => {
 
     await task.deleteOne();
 
-    const newLog = await Log.create({
+    let newLog = await Log.create({
       actionType: "Delete",
       task: task._id,
       performedBy: req.user._id,
       details: `Delete task "${taskTitle}"`
     });
 
-      newLog = await Log.populate("performedBy", "name").populate("task", "title");
+     newLog = await Log.findById(newLog._id)
+      .populate("performedBy", "name")
+      .populate("task", "title");
+
 
     req.io.emit("logAdded", newLog);
     req.io.emit("taskDeleted", task._id); // 👈 required for real-time deletion

@@ -28,29 +28,45 @@ const KanbanDashboard = () => {
     done: { badge: 'badge-done' }
   };
 
-  const statusMap = { "Todo": "todo", "In Progress": "inProgress", "Done": "done" };
-  const reverseStatusMap = { todo: "Todo", inProgress: "In Progress", done: "Done" };
+  const statusMap = { 
+    "Todo": "todo",
+    "In Progress": "inProgress",
+    "Done": "done"
+     };
+  const reverseStatusMap = {
+    todo: "Todo",
+    inProgress: "In Progress",
+    done: "Done" 
+    };
 
   const loadTasks = async () => {
-    const res = await fetchTasks();
-    const organized = { todo: [], inProgress: [], done: [] };
-    res.data.forEach(task => {
-      const key = statusMap[task.status] || "todo";
-      organized[key].push(task);
-    });
-    setTasks(organized);
+    try {
+      const res = await fetchTasks();
+      const organized = { todo: [], inProgress: [], done: [] };
+      res.data.forEach(task => {
+        const key = statusMap[task.status] || "todo";
+        organized[key].push(task);
+      });
+      setTasks(organized);
+    } catch (err) {
+      console.error("❌ Failed to load tasks:", err);
+    }
   };
 
   const loadLogs = async () => {
+   try {
     const res = await fetchLogs();
-    const formatted = res.data.map(log => ({
-      id: log._id,
-      action: log.details || `${log.actionType} task "${log.task?.title}"`,
-      status: statusMap[log.task?.status] || "todo",
-      user: log.performedBy?.name || "Someone",
-      time: new Date(log.createdAt).toLocaleTimeString()
-    }));
-    setActivities(formatted);
+     const formatted = res.data.map(log => ({
+       id: log._id,
+       action: log.details || `${log.actionType} task "${log.task?.title}"`,
+       status: statusMap[log.task?.status] || "todo",
+       user: log.performedBy?.name || "Someone",
+       time: new Date(log.createdAt).toLocaleTimeString()
+     }));
+     setActivities(formatted);
+   } catch (err) {
+    console.error("failed to load logs:",err)
+   }
   };
 
   useEffect(() => {
@@ -68,14 +84,27 @@ const KanbanDashboard = () => {
     });
         // 🟢 Task Created or Updated
    
-  socket.on("taskUpdated", (task) => {
-    const colKey = statusMap[task.status] || "todo";
+  // socket.on("taskUpdated", (task) => {
+  //   const colKey = statusMap[task.status] || "todo";
+  //   setTasks(prev => {
+  //     const updatedCol = [...prev[colKey].filter(t => t._id !== task._id), task];
+  //     return {
+  //       ...prev,
+  //       [colKey]: updatedCol
+  //     };
+  //   });
+  // });
+  socket.on("taskUpdated", (updatedTask) => {
     setTasks(prev => {
-      const updatedCol = [...prev[colKey].filter(t => t._id !== task._id), task];
-      return {
-        ...prev,
-        [colKey]: updatedCol
-      };
+      const key = statusMap[updatedTask.status] || "todo";
+      const newTasks = { ...prev };
+      // Remove from all columns
+      Object.keys(newTasks).forEach(col => {
+        newTasks[col] = newTasks[col].filter(t => t._id !== updatedTask._id);
+      });
+      // Add to correct column
+      newTasks[key].push(updatedTask);
+      return newTasks;
     });
   });
 
@@ -92,7 +121,7 @@ const KanbanDashboard = () => {
 
  socket.on("taskDeleted", (taskId) => {
     setTasks(prev => {
-      const newTasks = {};
+      const newTasks = {...prev};
       for (const col in prev) {
         newTasks[col] = prev[col].filter(t => t._id !== taskId);
       }
@@ -118,13 +147,13 @@ const KanbanDashboard = () => {
      const res = await createTask({ ...taskData, status: reverseStatusMap[taskData.status] });
      const createdTask = res.data;
  
-    setTasks((prevTasks) => {
-    const key = statusMap[createdTask.status] || "todo";
-    return {
-     ...prevTasks,
-     [key]: [...prevTasks[key], createdTask],
-    };
-    });
+    // setTasks((prevTasks) => {
+    // const key = statusMap[createdTask.status] || "todo";
+    // return {
+    //  ...prevTasks,
+    //  [key]: [...prevTasks[key], createdTask],
+    // };
+    // });
  
    setIsModalOpen(false);
    } catch (error) {
@@ -135,8 +164,12 @@ const KanbanDashboard = () => {
   };
 
   const handleDelete = async (taskId) => {
-    await deleteTask(taskId);
-    await loadTasks();
+  try {
+      await deleteTask(taskId);
+  } catch (err) {
+    console.error("Delete error:", err)
+  }
+    
   };
 
   const handleDragStart = (task, column) => {
